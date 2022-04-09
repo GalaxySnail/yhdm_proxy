@@ -6,10 +6,27 @@
 #
 astroid==2.11.2
     # via pylint
+async-generator==1.10
+    # via
+    #   -c requirements.txt
+    #   trio
+attrs==21.4.0
+    # via
+    #   -c requirements.txt
+    #   outcome
+    #   trio
+cffi==1.15.0
+    # via
+    #   -c requirements.txt
+    #   trio
 colorama==0.4.4
     # via pylint
 dill==0.3.4
     # via pylint
+idna==3.3
+    # via
+    #   -c requirements.txt
+    #   trio
 isort==5.10.1
     # via pylint
 lazy-object-proxy==1.7.1
@@ -19,17 +36,43 @@ mccabe==0.7.0
 mypy==0.942
     # via -r dev.in
 mypy-extensions==0.4.3
-    # via mypy
+    # via
+    #   mypy
+    #   trio-typing
+outcome==1.1.0
+    # via
+    #   -c requirements.txt
+    #   trio
 platformdirs==2.5.1
     # via pylint
+pycparser==2.21
+    # via
+    #   -c requirements.txt
+    #   cffi
 pylint==2.13.5
     # via -r dev.in
+sniffio==1.2.0
+    # via
+    #   -c requirements.txt
+    #   trio
+sortedcontainers==2.4.0
+    # via
+    #   -c requirements.txt
+    #   trio
 tomli==2.0.1
     # via
     #   mypy
     #   pylint
+trio==0.20.0
+    # via
+    #   -c requirements.txt
+    #   trio-typing
+trio-typing==0.7.0
+    # via -r dev.in
 typing-extensions==4.1.1
-    # via mypy
+    # via
+    #   mypy
+    #   trio-typing
 wrapt==1.14.0
     # via astroid
 

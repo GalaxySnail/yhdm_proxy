@@ -3,3 +3,6 @@
 
 mypy
 pylint
+
+# typing
+trio-typing
