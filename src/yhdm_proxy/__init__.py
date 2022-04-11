@@ -28,8 +28,8 @@ async def handler(
         )
         try:
             await http_handler(http_wrapper)
-        # except CloseConnection:
-        #     pass
+        except CloseConnection:
+            pass
         except Exception:  # pylint: disable=W0703
             await http_wrapper.log(
                 "Uncatched exception:\n"
