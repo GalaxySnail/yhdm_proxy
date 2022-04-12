@@ -2,18 +2,32 @@
 # https://github.com/python-hyper/h11/blob/v0.13.0/examples/trio-server.py
 # LICENSE: MIT
 
+from __future__ import annotations
+
+import sys
 import time
+import pprint
+import traceback
 from itertools import count
 from dataclasses import dataclass, field
-from collections.abc import Iterator
+from collections.abc import Iterator, Iterable
 
-from typing import ClassVar, Any
+import typing
+from typing import ClassVar, Any, TypeAlias
 
 import trio
+# httpcore pinned h11<0.13.0, we need to wait for it
 import h11  # type: ignore
 
 from .__version__ import __version__
 from . import _log
+from ._context import request
+
+
+# 在 python3.10 之前，不要在运行时执行如下代码
+if typing.TYPE_CHECKING or sys.version_info >= (3, 10):
+    BytesLikeStr: TypeAlias = bytes | bytearray | str
+    H11Headers: TypeAlias = Iterable[tuple[BytesLikeStr, BytesLikeStr]]
 
 
 # Weekday and month names for HTTP date/time formatting; always English!
@@ -32,6 +46,7 @@ def format_date_time(timestamp):
     )
 
 
+# FIXME 这个类包含了太多逻辑，考虑用 ContextVar 重构
 @dataclass
 class TrioHTTPWrapper(trio.abc.AsyncResource):
     stream: trio.SocketStream
@@ -54,7 +69,7 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
         # simultaneous clients).
         self._obj_id = next(TrioHTTPWrapper._next_id)
 
-    async def send(self, event):
+    async def _send(self, event):
         # The code below doesn't send ConnectionClosed, so we don't bother
         # handling it here either -- it would require that we do something
         # appropriate when 'data' is None.
@@ -68,12 +83,34 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
             self.conn.send_failed()
             raise
 
+    async def send_response(
+        self, *,
+        status_code: int,
+        headers: H11Headers,
+        reason: bytes | str = b"",
+    ) -> None:
+        res = h11.Response(
+            status_code=status_code,
+            headers=headers,
+            reason=reason,
+        )
+        # await self.log(f"send response: {res}")
+        await self._send(res)
+
+    async def send_data(self, data: bytes | bytearray | memoryview) -> None:
+        if request.get().method != b"HEAD":
+            # 只有在不是 HEAD 请求的时候发送响应体
+            await self._send(h11.Data(data=data))
+
+    async def send_eof(self) -> None:
+        await self._send(h11.EndOfMessage())
+
     async def _read_from_peer(self):
         if self.conn.they_are_waiting_for_100_continue:
             go_ahead = h11.InformationalResponse(
-                status_code=100, headers=self.basic_headers()
+                status_code=100, headers=self._basic_headers()
             )
-            await self.send(go_ahead)
+            await self._send(go_ahead)
         try:
             data = await self.stream.receive_some(self.max_recv)
         except ConnectionError:
@@ -127,7 +164,7 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
     async def aclose(self):
         await self._shutdown_and_clean_up()
 
-    def basic_headers(self) -> list[tuple[str, Any]]:
+    def _basic_headers(self) -> list[tuple[BytesLikeStr, BytesLikeStr]]:
         # HTTP requires these headers in all responses (client would do
         # something different here)
         return [
@@ -135,5 +172,38 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
             ("Server", self.ident),
         ]
 
+    def simple_response_header(
+        self,
+        content_type: BytesLikeStr | None,
+        content_length: int,
+    ) -> list[tuple[BytesLikeStr, BytesLikeStr]]:
+        headers: list[tuple[BytesLikeStr, BytesLikeStr]]
+        headers = self._basic_headers()
+        if content_type is not None:
+            headers.append(("Content-Type", content_type))
+        headers.append(("Content-Length", str(content_length)))
+        return headers
+
     async def log(self, msg: str) -> None:
         await self.logger.log(f"{self._obj_id}: {msg}")
+
+    async def log_exception(self, msg: str, exc: Exception | None = None) -> None:
+        exc_info_str = (
+            traceback.format_exc()
+            if exc is None else
+            traceback.format_exception(type(exc), exc, exc.__traceback__)
+        )
+        await self.log(
+            f"{msg}\n"
+            "---- start exception info -----\n"
+            f"{exc_info_str}"
+            "---- end exception info -----"
+        )
+
+    async def log_pprint(self, msg: str, name: str, value: Any) -> None:
+        await self.log(
+            f"{msg}\n"
+            f"----- start {name} -----\n"
+            f"{pprint.pformat(value)}\n"
+            f"----- end {name} -----"
+        )

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import re
 from http import HTTPStatus
+from dataclasses import dataclass
+from contextvars import ContextVar
 
 from typing import Any, ClassVar
 
@@ -9,42 +11,15 @@ import trio
 # httpcore pinned h11<0.13.0, we need to wait for it
 import h11  # type: ignore
 
-from . import _log
-from ._recv_helper import receive_exactly, PartialResult
+from ._forward import forward_request
 from ._trio_http_server import TrioHTTPWrapper
-from ._get_data import get_m3u8, get_png_video
-
-
-class CloseConnection(Exception):
-    """表示应该关闭 tcp 连接。
-    这个异常不应该被中途捕获，而是自动传播到 handler 顶层，
-    被捕获后关闭连接
-    """
-
-
-class HTTPStatusError(Exception):
-    """用来表示 HTTP 错误状态的基类"""
-    code: ClassVar[HTTPStatus]
-
-
-class NotFound(HTTPStatusError):
-    code = HTTPStatus.NOT_FOUND
-
-
-class MethodNotAllowed(HTTPStatusError):
-    code = HTTPStatus.METHOD_NOT_ALLOWED
-
-
-def simple_response_header(
-    http_wrapper: TrioHTTPWrapper,
-    content_type: str | None,
-    content_length: int,
-) -> list[tuple[str, Any]]:
-    headers = http_wrapper.basic_headers()
-    if content_type is not None:
-        headers.append(("Content-Type", content_type))
-    headers.append(("Content-Length", str(content_length)))
-    return headers
+from ._context import request as context_request
+from ._exceptions import (
+    CloseConnection,
+    HTTPStatusError,
+    NotFound,
+    MethodNotAllowed,
+)
 
 
 async def send_error_response(
@@ -57,16 +32,21 @@ async def send_error_response(
         f"<h1>{status_code} {HTTPStatus(status_code).phrase}</h1>"
         "</center></body></html>\n"
     ).encode("utf-8")
-    headers = simple_response_header(
-        http_wrapper, "text/html; charset=utf-8", len(body))
-    res = h11.Response(status_code=status_code, headers=headers)
-    await http_wrapper.send(res)
-    await http_wrapper.send(h11.Data(data=body))
-    await http_wrapper.send(h11.EndOfMessage())
+    headers = http_wrapper.simple_response_header(
+        "text/html; charset=utf-8",
+        len(body),
+    )
+    await http_wrapper.send_response(
+        status_code=status_code,
+        headers=headers,
+        reason=status_code.phrase.encode(),
+    )
+    await http_wrapper.send_data(body)
+    await http_wrapper.send_eof()
 
 
-M3U8_TARGET_PATTERN = re.compile(rb"^/m3u8/(https?://.*)")
-DATA_TARGET_PATTERN = re.compile(rb"^/data/(\d+)$")
+M3U8_PATTERN = re.compile(r"^/m3u8/(https?://.*)")
+PNG_PATTERN = re.compile(r"^/png/(https?://.*)")
 
 
 async def handle_a_request(http_wrapper: TrioHTTPWrapper) -> None:
@@ -76,11 +56,14 @@ async def handle_a_request(http_wrapper: TrioHTTPWrapper) -> None:
     # 读取请求头
     with trio.fail_after(http_wrapper.timeout):
         event = await http_wrapper.next_event()
+
     if isinstance(event, h11.ConnectionClosed):
+        assert http_wrapper.conn.our_state is h11.MUST_CLOSE
         raise CloseConnection
     assert isinstance(event, h11.Request), f"event = {event}"
 
     request: h11.Request = event
+    context_request.set(request)
     await http_wrapper.log(
         f"{request.method.decode()} on {request.target.decode()}"
     )
@@ -94,14 +77,18 @@ async def handle_a_request(http_wrapper: TrioHTTPWrapper) -> None:
         raise h11.RemoteProtocolError("content for GET method is not allowed")
 
     # 根据 target 分派请求处理
-    target: bytes = request.target
-    match = M3U8_TARGET_PATTERN.search(target)
+    target: str = request.target.decode()
+
+    match = re.match(M3U8_PATTERN, target)
     if match:
-        await get_m3u8(request, match.group(1).decode(), http_wrapper)
+        url = match.group(1)
+        await forward_request(request, "m3u8", url, http_wrapper)
         return
-    match = DATA_TARGET_PATTERN.search(target)
+
+    match = re.match(PNG_PATTERN, target)
     if match:
-        await get_png_video(request, int(match.group(1)), http_wrapper)
+        url = match.group(1)
+        await forward_request(request, "png", url, http_wrapper)
         return
 
     raise NotFound
@@ -111,6 +98,7 @@ async def try_to_send_error_response(
     http_wrapper: TrioHTTPWrapper,
     exc: Exception,
 ) -> None:
+    """如果当前状态还有机会发送HTTP响应，则根据异常类型发送一个错误响应"""
     if http_wrapper.conn.our_state not in {h11.IDLE, h11.SEND_RESPONSE}:
         return
 
@@ -129,21 +117,12 @@ async def try_to_send_error_response(
     assert http_wrapper.conn.our_state in {h11.DONE, h11.MUST_CLOSE}
 
 
-async def try_to_start_next_cycle(
-    http_wrapper: TrioHTTPWrapper,
-    last_exc: Exception | None = None
-) -> None:
+async def try_to_start_next_cycle(http_wrapper: TrioHTTPWrapper) -> None:
     """一个请求处理完毕，尝试启动下一个处理循环。
     如果正常返回，则说明成功进入下一个循环
     如果引发 CloseConnection ，则正常关闭连接
     如果引发 h11.ProtocolError ，则说明出现了意料之外的问题
     """
-    # 如果之前发生了 AssertionError，则重新引发它
-    if isinstance(last_exc, AssertionError):
-        raise last_exc
-    # 如果之前发生了超时，则放弃连接
-    if isinstance(last_exc, trio.TooSlowError):
-        raise CloseConnection
     # 请求处理完毕，如果不启用 keep alive 则关闭连接
     if http_wrapper.conn.our_state is h11.MUST_CLOSE:
         raise CloseConnection
@@ -152,8 +131,6 @@ async def try_to_start_next_cycle(
     try:
         http_wrapper.conn.start_next_cycle()
     except h11.ProtocolError as exc:
-        if last_exc is not None:
-            exc.__cause__ = last_exc
         await http_wrapper.log(f"Unexpected state {http_wrapper.conn.states}")
         await try_to_send_error_response(http_wrapper, exc)
         raise
@@ -163,15 +140,41 @@ async def try_to_start_next_cycle(
 
 async def http_handler(http_wrapper: TrioHTTPWrapper) -> None:
     while True:
-        last_exc: Exception | None = None
+        # 外层的异常处理，根据异常决定关闭连接还是启动下一次循环
+        # 并且打印某些异常的回溯
         try:
-            await handle_a_request(http_wrapper)
-            assert http_wrapper.conn.our_state in {h11.DONE, h11.MUST_CLOSE}
-        except AssertionError as exc:
-            last_exc = exc
+            # 内层的异常处理，用于根据异常来发送错误响应，之后重新引发向上传播
+            try:
+                await handle_a_request(http_wrapper)
+                assert http_wrapper.conn.our_state in {h11.DONE, h11.MUST_CLOSE}
+            except Exception as exc:
+                await try_to_send_error_response(http_wrapper, exc)
+                raise
+
+        # 如果之前发生了超时，则放弃连接
+        except trio.TooSlowError as exc:
+            raise CloseConnection from exc
+
+        # 如果引发了 CloseConnection, 直接向上传播
+        except CloseConnection:
             raise
+
+        # h11.RemoteProtocolError 是对方客户端行为不正确导致的，不需要记录异常
+        except h11.RemoteProtocolError:
+            pass
+
+        # HTTPStatusError 不需要向上传播，而是在此处处理
+        # 如果 print_tb 属性为真，则就地打印异常回溯
+        except HTTPStatusError as exc:
+            if exc.print_tb:
+                await http_wrapper.log_exception("http status error:")
+
+        # 其它异常应该都是意外的，一律在此处捕获并打印回溯
         except Exception as exc:  # pylint: disable=W0703
-            last_exc = exc
-            await try_to_send_error_response(http_wrapper, exc)
-        finally:
-            await try_to_start_next_cycle(http_wrapper, last_exc)
+            await http_wrapper.log_exception("unexpected exception:")
+
+        # 到此为止，引发了异常的代码路径的异常都已经处理
+        # 需要打印回溯的异常都已经打印了回溯，这里不再需要处理异常信息
+        # 如果之前引发了 KeyboardInterrupted 异常则会直接传播
+        # 于是尝试启动下一个循环，这里引发的异常会直接被上层捕获
+        await try_to_start_next_cycle(http_wrapper)

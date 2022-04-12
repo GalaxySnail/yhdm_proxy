@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from functools import partial
 from dataclasses import dataclass
-from collections.abc import ByteString, Callable, Awaitable
+from collections.abc import ByteString, Callable, Awaitable, AsyncIterator
 
 import typing
 from typing import TypeVar, Generic
@@ -15,6 +15,8 @@ else:
 
 if typing.TYPE_CHECKING:
     from _typeshed import WriteableBuffer
+
+from ._utils import anext
 
 
 T = TypeVar("T")
@@ -90,4 +92,21 @@ async def receive_exactly(
         partial_result.data = buf[:partial_result_int.data]
         raise
 
+    return buf
+
+
+async def read_at_least(
+    read_iter: AsyncIterator[bytes | bytearray],
+    min_bytes: int,
+    partial_result: PartialResult[bytes | bytearray],
+) -> bytes | bytearray:
+    """从一个产生字节对象的异步迭代器中，尽可能读取至少 max_bytes 个字节"""
+    buf = bytearray()
+    async for data in read_iter:
+        buf.extend(data)
+        if len(buf) >= min_bytes:
+            break
+    else:
+        partial_result.data = buf
+        raise EOFError
     return buf

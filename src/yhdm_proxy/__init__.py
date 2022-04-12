@@ -1,24 +1,27 @@
 from __future__ import annotations
 
-import traceback
 from functools import partial
 from collections.abc import Callable, Awaitable
 
 import trio
 
 from . import _log
-from ._handler import http_handler, CloseConnection
+from ._handler import http_handler
+from ._exceptions import CloseConnection
 from ._trio_http_server import TrioHTTPWrapper
+from ._task_resources import open_exit_stack
 
 
 async def handler(
     stream: trio.SocketStream,
     get_logger: Callable[[], Awaitable[_log.Logger]],
 ) -> None:
+    http_wrapper: TrioHTTPWrapper
     async with \
             stream, \
             await get_logger() as logger, \
-            TrioHTTPWrapper(stream, logger) as http_wrapper:
+            TrioHTTPWrapper(stream, logger) as http_wrapper, \
+            open_exit_stack():
 
         remote_addr, remote_port, *_ = stream.socket.getpeername()
         local_addr, local_port, *_ = stream.socket.getsockname()
@@ -31,12 +34,7 @@ async def handler(
         except CloseConnection:
             pass
         except Exception:  # pylint: disable=W0703
-            await http_wrapper.log(
-                "Uncatched exception:\n"
-                "----- start exception info -----\n"
-                f"{traceback.format_exc()}"
-                "----- end exception info -----"
-            )
+            await http_wrapper.log_exception("Uncatched exception:")
         finally:
             await http_wrapper.log("Closed.")
 
