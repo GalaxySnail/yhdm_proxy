@@ -9,10 +9,14 @@ T = TypeVar("T")
 
 
 if sys.version_info >= (3, 10):
+    aiter = aiter
     anext = anext
 else:
+    def aiter(aiterable: AsyncIterable[T]) -> AsyncIterator[T]:
+        return aiterable.__aiter__()
+
     async def anext(aiterator: AsyncIterator[T]) -> T:
-        return aiterator.__anext__()
+        return await aiterator.__anext__()
 
 
 async def to_aiter(iterable: Iterable[T]) -> AsyncIterator[T]:
