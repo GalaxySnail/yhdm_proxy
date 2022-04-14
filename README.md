@@ -68,7 +68,7 @@ ffmpeg -i 'http://localhost:8787/m3u8/<url>' -c copy out.mp4
 或者可以用 [yt-dlp](https://github.com/yt-dlp/yt-dlp) 和 [aria2](https://aria2.github.io/) 下载：
 
 ```shell
-yt-dlp --dowloader aria2c 'http://localhost:8787/m3u8/<url>'
+yt-dlp --downloader aria2c 'http://localhost:8787/m3u8/<url>'
 ```
 
 详细用法请参见 yt-dlp 的文档。
