@@ -7,12 +7,15 @@ assert os.path.exists("pyproject.toml")
 with open("src/yhdm_proxy/__version__.py", encoding="utf-8") as f:
     exec(f.read())  # pylint: disable=W0122
 
+with open("README.md", encoding="utf-8") as f:
+    readme = f.read()
+
 
 setup(
     name="yhdm-proxy",
     version=__version__,  # type: ignore[name-defined]  # pylint: disable=E0602
     description="一个用于下载樱花动漫 m3u8 文件的反向代理",
-    # long_description=
+    long_description=readme,
     license="AGPL-3.0-or-later",
     package_dir={"": "src"},
     install_requires=[
