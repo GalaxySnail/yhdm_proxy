@@ -3,11 +3,28 @@
 
 # 安装
 
-在项目根目录运行如下命令即可安装：
+git clone 源码后，在项目根目录运行如下命令即可安装：
 
 ```shell
-pip install .
+# 可以：
+git clone https://github.com/GalaxySnail/yhdm_proxy
+pip install ./yhdm_proxy
+# 或者直接：
+pip install git+https://github.com/GalaxySnail/yhdm_proxy
 ```
+
+或者下载源码包安装：
+
+```shell
+# 可以：
+curl https://github.com/GalaxySnail/yhdm_proxy/archive/refs/heads/master.tar.gz -o yhdm_proxy.tar.gz
+pip install yhdm_proxy.tar.gz
+# 或者直接：
+pip install https://github.com/GalaxySnail/yhdm_proxy/archive/refs/heads/master.tar.gz
+```
+
+也可以下载源码后在项目根目录运行 `pip install .` 安装。
+或者也可以使用任何兼容 [PEP 517](https://www.python.org/dev/peps/pep-0517/) 的工具安装。
 
 考虑到本程序适用范围较窄，且依赖专有服务的非公开 API，所以本程序暂时不考虑上传到 pypi.org。请 git clone 仓库或者下载源码包安装。
 

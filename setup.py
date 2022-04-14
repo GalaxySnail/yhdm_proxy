@@ -14,6 +14,8 @@ with open("README.md", encoding="utf-8") as f:
 setup(
     name="yhdm-proxy",
     version=__version__,  # type: ignore[name-defined]  # pylint: disable=E0602
+    url="https://github.com/GalaxySnail/yhdm_proxy",
+    author="GalaxySnail",
     description="一个用于下载樱花动漫 m3u8 文件的反向代理",
     long_description=readme,
     license="AGPL-3.0-or-later",
