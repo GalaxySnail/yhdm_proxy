@@ -21,9 +21,9 @@ setup(
     license="AGPL-3.0-or-later",
     package_dir={"": "src"},
     install_requires=[
-        "trio",
-        "httpx",
-        "h11",
+        "trio >= 0.20.0",
+        "httpx >= 0.22.0",
+        "h11 >= 0.12.0",
     ],
     package_data={"yhdm_proxy": ["py.typed"]},
     python_requires=">=3.7",
