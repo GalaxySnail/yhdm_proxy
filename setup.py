@@ -29,7 +29,7 @@ setup(
     python_requires=">=3.7",
     keywords=["trio", "proxy", "樱花动漫", "m3u8"],
     classifiers = [
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 4 - Beta",
         "Framework :: Trio",
         "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
         "Natural Language :: Chinese (Simplified)",
