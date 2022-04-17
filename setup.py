@@ -27,7 +27,7 @@ setup(
     ],
     package_data={"yhdm_proxy": ["py.typed"]},
     python_requires=">=3.7",
-    keywords=["trio", "proxy", "樱花动漫", "m3u8"],
+    keywords=["trio", "proxy", "樱花动漫", "m3u8", "png"],
     classifiers = [
         "Development Status :: 4 - Beta",
         "Framework :: Trio",
