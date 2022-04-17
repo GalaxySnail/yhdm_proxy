@@ -14,17 +14,26 @@ import httpx
 
 from ._utils import achain, to_aiter
 from ._exceptions import GatewayTimeout
-from ._recv_helper import PartialResult, read_at_least, find_in_stream
+from ._recv_helper import (
+    PartialResult,
+    read_at_least,
+    find_in_stream,
+    ReceiveStreamWrapper,
+    receive_exactly,
+)
+from ._png_format import (
+    png_chunk_parser,
+    PNG_SIGNATURE,
+    PNGChunkType,
+    LazyPNGChunk,
+    PNGFormatError,
+)
 from ._trio_http_server import TrioHTTPWrapper
 from ._context import get_client
 from ._exceptions import BadGateway
 
 if typing.TYPE_CHECKING:
     from ._trio_http_server import H11Headers
-
-
-PNG_FORMAT_START = b"\211PNG\r\n\032\n"
-PNG_FORMAT_END = b"IEND\xae\x42\x60\x82"
 
 
 @asynccontextmanager
@@ -128,31 +137,17 @@ async def modify_png_video(
     data: bytes | bytearray
     length = int(response.headers["Content-Length"])
     stream_iter = response.aiter_bytes()
+    stream = ReceiveStreamWrapper(stream_iter)
     # 响应的格式应该是 FFmpeg Service01, 因此这里简单使用二进制流类型
     # https://developer.mozilla.org/docs/Web/HTTP/Basics_of_HTTP/MIME_types#applicationoctet-stream
     content_type = "application/octet-stream"
 
-    if method == "HEAD":
-        # HEAD 请求，没有响应体所以没法判断是不是符合要求的文件格式
-        # 于是这里直接硬编码长度，认为删掉流的前 120 字节
-        res_headers = \
-            http_wrapper.simple_response_header(content_type, length - 120)
-        await http_wrapper.send_response(
-            status_code=200,
-            headers=res_headers,
-        )
-        await http_wrapper.send_eof()
-        return
-
-    # 处理 GET 请求
-    assert method == "GET", method
-
     # 读取前8个字节，确定文件格式是否为 png
     partial_result: PartialResult[bytes | bytearray] = PartialResult()
     try:
-        start_data = await read_at_least(
-            stream_iter,
-            len(PNG_FORMAT_START),
+        start_data = await receive_exactly(
+            stream,
+            len(PNG_SIGNATURE),
             partial_result,
         )
     except EOFError as exc:
@@ -163,41 +158,92 @@ async def modify_png_video(
     assert partial_result.data is None
 
     # 如果响应体不是 png 文件，只好不做修改，原样转发流
-    if not start_data.startswith(PNG_FORMAT_START):
+    if not start_data.startswith(PNG_SIGNATURE):
         await http_wrapper.log("not a png file, forward it directly")
+        await http_wrapper.log(f"start_data = {start_data!r}")
         await http_wrapper.send_response(
             status_code=response.status_code,
             headers=response.headers.items(),
             reason=response.reason_phrase,
         )
         await http_wrapper.send_data(start_data)
+        # 在 stream 中还缓冲了一部分数据
+        if stream.buf is not None:
+            await http_wrapper.send_data(stream.buf)
+        del stream
+
         async for data in response.aiter_bytes():
             await http_wrapper.send_data(data)
         await http_wrapper.send_eof()
         return
 
-    # 解析 png 文件结尾，并忽略它
-    offset = 0
-    async for data, find in find_in_stream(
-        achain(to_aiter([start_data]), stream_iter),
-        PNG_FORMAT_END,
-    ):
-        if find:
-            break
-        offset += len(data)
+    # 目前已知有两种情况：
+    # 1. 图片尺寸为 1x1，载荷数据位于 IEND 块结束之后
+    # 2. 图片尺寸为 800x800，载荷数据位于 IDAT 块的主体内
+
+    offset = len(PNG_SIGNATURE)
+    png_chunk_iter = png_chunk_parser(stream)
+    # 处理第一个 IHDR 块
+    chunk: LazyPNGChunk = await anext(png_chunk_iter)
+    if chunk.chunk_type is not PNGChunkType.IHDR:
+        http_wrapper.log(f"the first chunk of PNG must be IHDR, but got {chunk}")
+        raise BadGateway
+    done_chunk = await chunk.do_it()
+    width, height = done_chunk.image_size()
+    offset += done_chunk.total_size()
+
+    if width == height == 1:
+        # 一直读取到 IEND 为止
+        async for chunk in png_chunk_iter:
+            await chunk.skip_it()
+            offset += chunk.total_size()
+            if chunk.chunk_type is PNGChunkType.IEND:
+                break
+        else:
+            # 没有找到 IEND 块，不应该发生
+            await http_wrapper.log("PNG file IEND chunk is not found")
+            raise BadGateway
+        # 此时流位于 IEND 块结束的位置，直接返回剩余的流即可
+
+    elif width == height == 800:
+        async for chunk in png_chunk_iter:
+            if chunk.chunk_type is PNGChunkType.IDAT:
+                # 给偏移量加上块开头的长度、类型所占的尺寸
+                offset += 4 + 4
+                break
+            await chunk.skip_it()
+            offset += chunk.total_size()
+        else:
+            # 没有找到 IDAT 块，不应该发生
+            await http_wrapper.log("PNG file IDAT chunk is not found")
+            raise BadGateway
+        # 此时流位于 IDAT 块的起始位置，直接把流的剩余部分返回即可
+
     else:
-        # 迭代完了整个流仍没有找到 png 文件结尾，这不应该发生
-        await http_wrapper.log("PNG file end not found")
+        # 未知的图片尺寸
+        await http_wrapper.log("unknown PNG image size")
         raise BadGateway
 
-    # 此时，data 变量一定以 PNG_FORMAT_END 开头
-    assert data.startswith(PNG_FORMAT_END)
-    await http_wrapper.log(f"PNG length: {offset + len(PNG_FORMAT_END)}")
+    await http_wrapper.log(f"video stream starts at offset {offset}")
 
-    headers = http_wrapper.simple_response_header(
-        content_type, length - offset - len(PNG_FORMAT_END))
-    await http_wrapper.send_response(status_code=200, headers=headers)
-    await http_wrapper.send_data(data[len(PNG_FORMAT_END):])
+    # 发送响应头
+    res_headers = http_wrapper.simple_response_header(
+        content_type, length - offset)
+    await http_wrapper.send_response(
+        status_code=200,
+        headers=res_headers,
+    )
+    if method == "HEAD":
+        # HEAD 请求，直接返回即可
+        await http_wrapper.send_eof()
+        return
+
+    assert method == "GET"
+
+    # stream 中还有一些缓冲的数据
+    if stream.buf is not None:
+        await http_wrapper.send_data(stream.buf)
+    del stream
     async for data in stream_iter:
         await http_wrapper.send_data(data)
     await http_wrapper.send_eof()
@@ -209,14 +255,18 @@ async def forward_png_video(
     headers: dict[bytes, bytes],
     http_wrapper: TrioHTTPWrapper,
 ) -> None:
-    async with wrap_httpx_request(method, url, headers, http_wrapper) as response:
+    async with wrap_httpx_request("GET", url, headers, http_wrapper) as response:
         if not response.is_success:
             code = HTTPStatus(response.status_code)
             await http_wrapper.log(
                 f"client: request failed with {code.value} {code.phrase}")
             raise BadGateway
 
-        await modify_png_video(method, response, http_wrapper)
+        try:
+            await modify_png_video(method, response, http_wrapper)
+        except PNGFormatError as exc:
+            await http_wrapper.log_exception("not a valid png file")
+            raise BadGateway from exc
 
 
 async def forward_request(

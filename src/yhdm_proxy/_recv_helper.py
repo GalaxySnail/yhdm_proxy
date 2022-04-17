@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import sys
 from functools import partial
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from collections.abc import Callable, Awaitable, AsyncIterator
 
 import typing
@@ -25,6 +25,8 @@ else:
 if typing.TYPE_CHECKING:
     from _typeshed import WriteableBuffer
 
+import trio.abc
+
 from ._utils import anext
 
 
@@ -33,12 +35,12 @@ T = TypeVar("T")
 
 @runtime_checkable
 class SupportsReceiveSome(Protocol):
-    async def reveive_some(self, max_bytes: int) -> bytes | bytearray: ...
+    async def receive_some(self, max_bytes: int) -> bytes | bytearray: ...
 
 
 @runtime_checkable
 class SupportsReceiveSomeInto(Protocol):
-    async def reveive_some_into(self, writable_buf: WriteableBuffer) -> int: ...
+    async def receive_some_into(self, writable_buf: WriteableBuffer) -> int: ...
 
 
 @dataclass
@@ -57,7 +59,7 @@ async def wrap_reveive_into(
     stream: SupportsReceiveSome,
     writable_buf: memoryview,
 ) -> int:
-    data = await stream.reveive_some(len(writable_buf))
+    data = await stream.receive_some(len(writable_buf))
     length = len(data)
     writable_buf[:length] = data
     return length
@@ -72,7 +74,7 @@ async def receive_exactly_into(
 
     receive_into: Callable[[WriteableBuffer], Awaitable[int]]
     if isinstance(stream, SupportsReceiveSomeInto):
-        receive_into = stream.reveive_some_into
+        receive_into = stream.receive_some_into
     else:
         receive_into = partial(wrap_reveive_into, stream)
 
@@ -154,3 +156,86 @@ async def find_in_stream(
         offset = -len(sub) + 1
         yield buf[:offset], False
         buf = buf[offset:]
+
+
+def memviewcpy(
+    dst: memoryview,
+    src: bytes | bytearray | memoryview,
+) -> tuple[int, memoryview | None]:
+    """copy data from src to dst just like receive_some_into"""
+    src_length = len(src)
+    dst_length = len(dst)
+
+    if src_length <= dst_length:
+        dst[:src_length] = src
+        # not sure if it's necessary
+        # if isinstance(src, memoryview):
+        #     src.release()
+        return src_length, None
+
+    with memoryview(src) as src_mv:
+        with src_mv[:dst_length] as mv:
+            dst[:] = mv
+        return dst_length, src_mv[dst_length:]
+
+
+def cut_bytes_at_most(
+    src: bytes | memoryview,
+    max_bytes: int | None,
+) -> tuple[bytes, memoryview | None]:
+    """copy data from src to a bytes-object just like receive_some"""
+    if max_bytes is None or len(src) <= max_bytes:
+        if isinstance(src, memoryview):
+            ret = src.tobytes()
+            src.release()
+            return ret, None
+        else:
+            return src, None
+
+    with memoryview(src) as src_mv:
+        with src_mv[:max_bytes] as mv:
+            return mv.tobytes(), src_mv[max_bytes:]
+
+
+# XXX 流 API 非常复杂，有返回任意长数据的，有返回最多某个长度的，
+#     有返回 bytes、bytearray、ReadableBuffer 的，还有直接写入缓冲区的。
+#     想要写出尽可能避免复制且通用于各种 API 的工具函数非常困难
+@dataclass
+class ReceiveStreamWrapper(trio.abc.ReceiveStream):
+    read_iter: AsyncIterator[bytes | bytearray]
+    buf: memoryview | None = None
+
+    async def receive_some(self, max_bytes: int | None = None) -> bytes:
+        if self.buf is not None:
+            await trio.sleep(0)
+            ret, self.buf = cut_bytes_at_most(self.buf, max_bytes)
+            return ret
+
+        try:
+            data = await anext(self.read_iter)
+        except StopAsyncIteration:
+            return b""
+
+        ret, self.buf = cut_bytes_at_most(data, max_bytes)
+        return ret
+
+    async def receive_some_into(self, writable_buf: WriteableBuffer) -> int:
+        with memoryview(writable_buf).cast("B") as writable_mv:
+            if self.buf is not None:
+                await trio.sleep(0)
+                ret, self.buf = memviewcpy(writable_mv, self.buf)
+                return ret
+
+            try:
+                data = await anext(self.read_iter)
+            except StopAsyncIteration:
+                return 0
+
+            ret, self.buf = memviewcpy(writable_mv, data)
+            return ret
+
+    async def aclose(self) -> None:
+        """It is a wrapper, so it won't close read_iter."""
+        if self.buf is not None:
+            self.buf.release()
+        await trio.sleep(0)
