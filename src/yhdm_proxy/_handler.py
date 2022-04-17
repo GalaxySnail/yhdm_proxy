@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import traceback
 from http import HTTPStatus
 from dataclasses import dataclass
 from contextvars import ContextVar
@@ -162,6 +163,19 @@ async def http_handler(http_wrapper: TrioHTTPWrapper) -> None:
         # h11.RemoteProtocolError 是对方客户端行为不正确导致的，不需要记录异常
         except h11.RemoteProtocolError:
             pass
+
+        # 如果 trio.BrokenResourceError 是由对方关闭 tcp 连接导致
+        # 只需要打印一条日志即可，不需要记录异常回溯
+        except trio.BrokenResourceError as exc:
+            if isinstance(exc.__cause__, ConnectionResetError):
+                errmsg = \
+                    traceback.format_exception_only(type(exc), exc)[0].rstrip()
+                await http_wrapper.log(
+                    f"Remote client closed the tcp connection ({errmsg})")
+            else:
+                await http_wrapper.log_exception("unexpected exception:")
+
+            raise CloseConnection from exc
 
         # HTTPStatusError 不需要向上传播，而是在此处处理
         # 如果 print_tb 属性为真，则就地打印异常回溯
