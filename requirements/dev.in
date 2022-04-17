@@ -6,3 +6,10 @@ pylint
 
 # typing
 trio-typing
+
+# tools
+pip-tools
+pipdeptree
+ipython
+pyupgrade
+tuna
