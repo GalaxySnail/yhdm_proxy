@@ -22,29 +22,6 @@ from ._exceptions import (
 )
 
 
-async def send_error_response(
-    http_wrapper: TrioHTTPWrapper,
-    status_code: HTTPStatus,
-) -> None:
-    """根据 HTTP 错误码发送错误响应"""
-    body = (
-        "<html><body><center>"
-        f"<h1>{status_code} {HTTPStatus(status_code).phrase}</h1>"
-        "</center></body></html>\n"
-    ).encode("utf-8")
-    headers = http_wrapper.simple_response_header(
-        "text/html; charset=utf-8",
-        len(body),
-    )
-    await http_wrapper.send_response(
-        status_code=status_code,
-        headers=headers,
-        reason=status_code.phrase.encode(),
-    )
-    await http_wrapper.send_data(body)
-    await http_wrapper.send_eof()
-
-
 M3U8_PATTERN = re.compile(r"^/m3u8/(https?://.*)")
 PNG_PATTERN = re.compile(r"^/png/(https?://.*)")
 
@@ -92,6 +69,29 @@ async def handle_a_request(http_wrapper: TrioHTTPWrapper) -> None:
         return
 
     raise NotFound
+
+
+async def send_error_response(
+    http_wrapper: TrioHTTPWrapper,
+    status_code: HTTPStatus,
+) -> None:
+    """根据 HTTP 错误码发送错误响应"""
+    body = (
+        "<html><body><center>"
+        f"<h1>{status_code} {HTTPStatus(status_code).phrase}</h1>"
+        "</center></body></html>\n"
+    ).encode("utf-8")
+    headers = http_wrapper.simple_response_header(
+        "text/html; charset=utf-8",
+        len(body),
+    )
+    await http_wrapper.send_response(
+        status_code=status_code,
+        headers=headers,
+        reason=status_code.phrase.encode(),
+    )
+    await http_wrapper.send_data(body)
+    await http_wrapper.send_eof()
 
 
 async def try_to_send_error_response(
