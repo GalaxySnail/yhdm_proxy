@@ -221,7 +221,7 @@ async def modify_png_video(
 
     else:
         # 未知的图片尺寸
-        await http_wrapper.log("unknown PNG image size")
+        await http_wrapper.log(f"unknown PNG image size: {width}x{height}")
         raise BadGateway
 
     await http_wrapper.log(f"video stream starts at offset {offset}")
