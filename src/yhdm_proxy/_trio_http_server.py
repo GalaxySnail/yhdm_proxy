@@ -7,7 +7,9 @@ from __future__ import annotations
 import sys
 import time
 import pprint
+import datetime
 import traceback
+import email.utils
 from itertools import count
 from dataclasses import dataclass, field
 from collections.abc import Iterator, Iterable
@@ -30,20 +32,18 @@ if typing.TYPE_CHECKING or sys.version_info >= (3, 10):
     H11Headers: TypeAlias = Iterable[tuple[BytesLikeStr, BytesLikeStr]]
 
 
-# Weekday and month names for HTTP date/time formatting; always English!
-_weekdayname = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-_monthname = [None, # Dummy so we can use 1-based month numbers
-              "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-def format_date_time(timestamp):
-    """stdlib wsgiref.handlers.format_date_time, but is not documented"""
-    year, month, day, hh, mm, ss, wd, *_ = time.gmtime(timestamp)
-    return (
-        f"{_weekdayname[wd]}, "
-        f"{day:02d} {_monthname[month]:3s} {year:4d} "
-        f"{hh:02d}:{mm:02d}:{ss:02d} GMT"
-    )
+# We are using email.utils.format_datetime to generate the Date header.
+# It may sound weird, but it actually follows the RFC.
+# Please see: https://stackoverflow.com/a/59416334/14723771
+#
+# See also:
+# [1] https://www.rfc-editor.org/rfc/rfc7231#section-7.1.1.1
+# [2] https://www.rfc-editor.org/rfc/rfc5322#section-3.3
+def format_date_time(dt: datetime.datetime | None = None):
+    """Generate a RFC 7231 IMF-fixdate string"""
+    if dt is None:
+        dt = datetime.datetime.now(datetime.timezone.utc)
+    return email.utils.format_datetime(dt, usegmt=True)
 
 
 # FIXME 这个类包含了太多逻辑，考虑用 ContextVar 重构
@@ -168,7 +168,7 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
         # HTTP requires these headers in all responses (client would do
         # something different here)
         return [
-            ("Date", format_date_time(None).encode("ascii")),
+            ("Date", format_date_time().encode("ascii")),
             ("Server", self.ident),
         ]
 
