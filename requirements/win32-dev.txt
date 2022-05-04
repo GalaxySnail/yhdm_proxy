@@ -4,7 +4,7 @@
 #
 #    pip-compile --allow-unsafe --no-emit-index-url --output-file=win32-dev.txt dev.in
 #
-astroid==2.11.2
+astroid==2.11.4
     # via pylint
 asttokens==2.0.5
     # via stack-data
@@ -23,7 +23,7 @@ cffi==1.15.0
     # via
     #   -c requirements.txt
     #   trio
-click==8.1.2
+click==8.1.3
     # via pip-tools
 colorama==0.4.4
     # via
@@ -40,7 +40,7 @@ idna==3.3
     # via
     #   -c requirements.txt
     #   trio
-ipython==8.2.0
+ipython==8.3.0
     # via -r dev.in
 isort==5.10.1
     # via pylint
@@ -52,7 +52,7 @@ matplotlib-inline==0.1.3
     # via ipython
 mccabe==0.7.0
     # via pylint
-mypy==0.942
+mypy==0.950
     # via -r dev.in
 mypy-extensions==0.4.3
     # via
@@ -72,7 +72,7 @@ pip-tools==6.6.0
     # via -r dev.in
 pipdeptree==2.2.1
     # via -r dev.in
-platformdirs==2.5.1
+platformdirs==2.5.2
     # via pylint
 prompt-toolkit==3.0.29
     # via ipython
@@ -82,9 +82,9 @@ pycparser==2.21
     # via
     #   -c requirements.txt
     #   cffi
-pygments==2.11.2
+pygments==2.12.0
     # via ipython
-pylint==2.13.5
+pylint==2.13.8
     # via -r dev.in
 pyupgrade==2.32.0
     # via -r dev.in
@@ -119,7 +119,7 @@ trio-typing==0.7.0
     # via -r dev.in
 tuna==0.5.11
     # via -r dev.in
-typing-extensions==4.1.1
+typing-extensions==4.2.0
     # via
     #   mypy
     #   trio-typing
@@ -127,7 +127,7 @@ wcwidth==0.2.5
     # via prompt-toolkit
 wheel==0.37.1
     # via pip-tools
-wrapt==1.14.0
+wrapt==1.14.1
     # via astroid
 
 # The following packages are considered to be unsafe in a requirements file:
