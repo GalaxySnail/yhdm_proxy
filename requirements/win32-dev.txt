@@ -4,7 +4,7 @@
 #
 #    pip-compile --allow-unsafe --no-emit-index-url --output-file=win32-dev.txt dev.in
 #
-astroid==2.11.4
+astroid==2.11.5
     # via pylint
 asttokens==2.0.5
     # via stack-data
@@ -32,7 +32,7 @@ colorama==0.4.4
     #   pylint
 decorator==5.1.1
     # via ipython
-dill==0.3.4
+dill==0.3.5.1
     # via pylint
 executing==0.8.3
     # via stack-data
@@ -68,7 +68,7 @@ pep517==0.12.0
     # via pip-tools
 pickleshare==0.7.5
     # via ipython
-pip-tools==6.6.0
+pip-tools==6.6.1
     # via -r dev.in
 pipdeptree==2.2.1
     # via -r dev.in
@@ -84,9 +84,9 @@ pycparser==2.21
     #   cffi
 pygments==2.12.0
     # via ipython
-pylint==2.13.8
+pylint==2.13.9
     # via -r dev.in
-pyupgrade==2.32.0
+pyupgrade==2.32.1
     # via -r dev.in
 six==1.16.0
     # via asttokens
@@ -107,7 +107,7 @@ tomli==2.0.1
     #   mypy
     #   pep517
     #   pylint
-traitlets==5.1.1
+traitlets==5.2.1.post0
     # via
     #   ipython
     #   matplotlib-inline
@@ -131,11 +131,11 @@ wrapt==1.14.1
     # via astroid
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==22.0.4
+pip==22.1
     # via
     #   pip-tools
     #   pipdeptree
-setuptools==62.1.0
+setuptools==62.3.2
     # via
     #   astroid
     #   ipython

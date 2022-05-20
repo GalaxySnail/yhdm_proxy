@@ -4,7 +4,7 @@
 #
 #    pip-compile --allow-unsafe --no-emit-index-url --output-file=win32-requirements.txt
 #
-anyio==3.5.0
+anyio==3.6.1
     # via httpcore
 async-generator==1.10
     # via trio
@@ -12,7 +12,7 @@ attrs==21.4.0
     # via
     #   outcome
     #   trio
-certifi==2021.10.8
+certifi==2022.5.18.1
     # via
     #   httpcore
     #   httpx
