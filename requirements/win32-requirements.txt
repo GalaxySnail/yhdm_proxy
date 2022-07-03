@@ -12,28 +12,26 @@ attrs==21.4.0
     # via
     #   outcome
     #   trio
-certifi==2022.5.18.1
+certifi==2022.6.15
     # via
     #   httpcore
     #   httpx
-cffi==1.15.0
+cffi==1.15.1
     # via trio
-charset-normalizer==2.0.12
-    # via httpx
 h11==0.12.0
     # via
     #   -r requirements.in
     #   httpcore
-httpcore==0.14.7
+httpcore==0.15.0
     # via httpx
-httpx==0.22.0
+httpx==0.23.0
     # via -r requirements.in
 idna==3.3
     # via
     #   anyio
     #   rfc3986
     #   trio
-outcome==1.1.0
+outcome==1.2.0
     # via trio
 pycparser==2.21
     # via cffi
@@ -47,5 +45,5 @@ sniffio==1.2.0
     #   trio
 sortedcontainers==2.4.0
     # via trio
-trio==0.20.0
+trio==0.21.0
     # via -r requirements.in

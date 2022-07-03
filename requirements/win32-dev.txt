@@ -4,7 +4,7 @@
 #
 #    pip-compile --allow-unsafe --no-emit-index-url --output-file=win32-dev.txt dev.in
 #
-astroid==2.11.5
+astroid==2.11.6
     # via pylint
 asttokens==2.0.5
     # via stack-data
@@ -19,14 +19,17 @@ attrs==21.4.0
     #   trio
 backcall==0.2.0
     # via ipython
-cffi==1.15.0
+build==0.8.0
+    # via pip-tools
+cffi==1.15.1
     # via
     #   -c requirements.txt
     #   trio
 click==8.1.3
     # via pip-tools
-colorama==0.4.4
+colorama==0.4.5
     # via
+    #   build
     #   click
     #   ipython
     #   pylint
@@ -40,7 +43,7 @@ idna==3.3
     # via
     #   -c requirements.txt
     #   trio
-ipython==8.3.0
+ipython==8.4.0
     # via -r dev.in
 isort==5.10.1
     # via pylint
@@ -52,29 +55,31 @@ matplotlib-inline==0.1.3
     # via ipython
 mccabe==0.7.0
     # via pylint
-mypy==0.950
+mypy==0.961
     # via -r dev.in
 mypy-extensions==0.4.3
     # via
     #   mypy
     #   trio-typing
-outcome==1.1.0
+outcome==1.2.0
     # via
     #   -c requirements.txt
     #   trio
+packaging==21.3
+    # via build
 parso==0.8.3
     # via jedi
 pep517==0.12.0
-    # via pip-tools
+    # via build
 pickleshare==0.7.5
     # via ipython
-pip-tools==6.6.1
+pip-tools==6.8.0
     # via -r dev.in
 pipdeptree==2.2.1
     # via -r dev.in
 platformdirs==2.5.2
     # via pylint
-prompt-toolkit==3.0.29
+prompt-toolkit==3.0.30
     # via ipython
 pure-eval==0.2.2
     # via stack-data
@@ -84,9 +89,11 @@ pycparser==2.21
     #   cffi
 pygments==2.12.0
     # via ipython
-pylint==2.13.9
+pylint==2.14.4
     # via -r dev.in
-pyupgrade==2.32.1
+pyparsing==3.0.9
+    # via packaging
+pyupgrade==2.34.0
     # via -r dev.in
 six==1.16.0
     # via asttokens
@@ -98,20 +105,23 @@ sortedcontainers==2.4.0
     # via
     #   -c requirements.txt
     #   trio
-stack-data==0.2.0
+stack-data==0.3.0
     # via ipython
 tokenize-rt==4.2.1
     # via pyupgrade
 tomli==2.0.1
     # via
+    #   build
     #   mypy
     #   pep517
     #   pylint
-traitlets==5.2.1.post0
+tomlkit==0.11.0
+    # via pylint
+traitlets==5.3.0
     # via
     #   ipython
     #   matplotlib-inline
-trio==0.20.0
+trio==0.21.0
     # via
     #   -c requirements.txt
     #   trio-typing
@@ -119,7 +129,7 @@ trio-typing==0.7.0
     # via -r dev.in
 tuna==0.5.11
     # via -r dev.in
-typing-extensions==4.2.0
+typing-extensions==4.3.0
     # via
     #   mypy
     #   trio-typing
@@ -131,11 +141,11 @@ wrapt==1.14.1
     # via astroid
 
 # The following packages are considered to be unsafe in a requirements file:
-pip==22.1
+pip==22.1.2
     # via
     #   pip-tools
     #   pipdeptree
-setuptools==62.3.2
+setuptools==62.6.0
     # via
     #   astroid
     #   ipython
