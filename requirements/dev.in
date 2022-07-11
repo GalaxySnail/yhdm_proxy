@@ -12,4 +12,7 @@ pip-tools
 pipdeptree
 ipython
 pyupgrade
+
+# profiler
+yappi
 tuna
