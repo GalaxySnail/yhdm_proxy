@@ -186,7 +186,7 @@ async def modify_png_video(
     # 处理第一个 IHDR 块
     chunk: LazyPNGChunk = await anext(png_chunk_iter)
     if chunk.chunk_type is not PNGChunkType.IHDR:
-        http_wrapper.log(f"the first chunk of PNG must be IHDR, but got {chunk}")
+        await http_wrapper.log(f"the first chunk of PNG must be IHDR, but got {chunk}")
         raise BadGateway
     done_chunk = await chunk.do_it()
     width, height = done_chunk.image_size()
