@@ -43,7 +43,8 @@ async def handle_a_request(http_wrapper: TrioHTTPWrapper) -> None:
     request: h11.Request = event
     context_request.set(request)
     await http_wrapper.log(
-        f"{request.method.decode()} on {request.target.decode()}"
+        f"{request.method.decode()} on {request.target.decode()}, "
+        f"HTTP/{request.http_version.decode()}"
     )
     if request.method not in {b"GET", b"HEAD"}:
         raise MethodNotAllowed

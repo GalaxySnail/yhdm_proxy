@@ -66,7 +66,7 @@ async def wrap_httpx_request(
         )
         await http_wrapper.log(f"client: status = {response.status_code}")
         await http_wrapper.log_pprint(
-            "client: headers =",
+            "client: response headers =",
             "headers",
             dict(response.headers),
         )
