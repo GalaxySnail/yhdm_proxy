@@ -11,7 +11,8 @@ def run():
         pass
 
 
-def yapii_run(clock):
+def yappi_run(clock):
+    import yappi
     yappi.set_clock_type(clock)
     with yappi.run():
         run()
