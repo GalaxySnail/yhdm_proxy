@@ -284,7 +284,7 @@ async def forward_request(
         raise RuntimeError("Unreachable")
 
     # 清理标头中的 host 字段，让 httpx 自己填写
-    headers = {k: v for k, v in request.headers if k != b"host"}
+    headers = [(k, v) for k, v in request.headers if k != b"host"]
 
     if forwarder == "m3u8":
         await forward_m3u8(method, url, headers, http_wrapper)
