@@ -48,7 +48,7 @@ async def wrap_timeout_error():
 async def wrap_httpx_request(
     method: Literal["GET", "HEAD"],
     url: str,
-    headers: dict[bytes, bytes],
+    headers: list[tuple[bytes, bytes]],
     http_wrapper: TrioHTTPWrapper,
 ):
     client = get_client()
@@ -110,7 +110,7 @@ async def modify_m3u8(
 async def forward_m3u8(
     method: Literal["GET", "HEAD"],  # pylint: disable=unused-argument
     url: str,
-    headers: dict[bytes, bytes],
+    headers: list[tuple[bytes, bytes]],
     http_wrapper: TrioHTTPWrapper,
 ) -> None:
     async with wrap_httpx_request("GET", url, headers, http_wrapper) as response:
@@ -252,7 +252,7 @@ async def modify_png_video(
 async def forward_png_video(
     method: Literal["GET", "HEAD"],
     url: str,
-    headers: dict[bytes, bytes],
+    headers: list[tuple[bytes, bytes]],
     http_wrapper: TrioHTTPWrapper,
 ) -> None:
     async with wrap_httpx_request("GET", url, headers, http_wrapper) as response:
