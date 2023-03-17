@@ -1,0 +1,5 @@
+# ln -s {env}-requirements.txt requirements.txt
+-c requirements.txt
+
+pytest >= 6.0.0
+flask >= 2.2.0
