@@ -21,7 +21,7 @@ import trio
 # httpcore pinned h11<0.13.0, we need to wait for it
 import h11  # type: ignore
 
-from .__version__ import __version__
+from ._version import __version__
 from . import _log
 from ._context import request
 

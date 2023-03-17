@@ -5,6 +5,7 @@ from collections.abc import Callable, Awaitable
 
 import trio
 
+from ._version import __version__
 from . import _log
 from ._handler import http_handler
 from ._exceptions import CloseConnection

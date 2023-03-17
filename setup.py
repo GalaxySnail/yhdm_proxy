@@ -4,7 +4,7 @@ from setuptools import setup
 assert os.path.exists("pyproject.toml")
 
 # for __version__
-with open("src/yhdm_proxy/__version__.py", encoding="utf-8") as f:
+with open("src/yhdm_proxy/_version.py", encoding="utf-8") as f:
     exec(f.read())  # pylint: disable=W0122
 
 with open("README.md", encoding="utf-8") as f:
