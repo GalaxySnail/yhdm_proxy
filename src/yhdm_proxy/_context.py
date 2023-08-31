@@ -3,8 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from contextvars import ContextVar
 
-# httpcore pinned h11<0.13.0, we need to wait for it
-import h11  # type: ignore
+import h11
 import trio
 import httpx
 

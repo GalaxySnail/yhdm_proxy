@@ -1,0 +1,5 @@
+-c requirements.in
+
+trio == 0.20.0
+httpx == 0.24.0
+h11 == 0.13.0

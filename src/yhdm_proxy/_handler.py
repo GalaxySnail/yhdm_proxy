@@ -9,8 +9,7 @@ from contextvars import ContextVar
 from typing import Any, ClassVar
 
 import trio
-# httpcore pinned h11<0.13.0, we need to wait for it
-import h11  # type: ignore
+import h11
 
 from ._forward import forward_request
 from ._trio_http_server import TrioHTTPWrapper

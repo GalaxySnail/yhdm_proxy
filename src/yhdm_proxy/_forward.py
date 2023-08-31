@@ -8,8 +8,7 @@ from contextlib import asynccontextmanager
 import typing
 from typing import Literal
 
-# httpcore pinned h11<0.13.0, we need to wait for it
-import h11  # type: ignore
+import h11
 import httpx
 
 from ._utils import achain, to_aiter

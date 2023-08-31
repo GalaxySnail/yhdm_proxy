@@ -22,8 +22,8 @@ setup(
     package_dir={"": "src"},
     install_requires=[
         "trio >= 0.20.0",
-        "httpx >= 0.22.0",
-        "h11 >= 0.12.0",
+        "httpx >= 0.24.0",
+        "h11 >= 0.13.0",
     ],
     package_data={"yhdm_proxy": ["py.typed"]},
     python_requires=">=3.7",
@@ -39,6 +39,7 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
         "Topic :: Internet :: Proxy Servers",
         "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
         "Topic :: Multimedia :: Video :: Conversion",

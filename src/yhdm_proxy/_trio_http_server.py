@@ -18,8 +18,7 @@ import typing
 from typing import ClassVar, Any, TypeAlias
 
 import trio
-# httpcore pinned h11<0.13.0, we need to wait for it
-import h11  # type: ignore
+import h11
 
 from ._version import __version__
 from . import _log
