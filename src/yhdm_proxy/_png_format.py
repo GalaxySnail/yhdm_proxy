@@ -43,11 +43,20 @@ class PNGCheckCRCError(PNGFormatError):
         return cls(msg, actual_crc, expected_crc)
 
 
-class PNGChunkType(Enum):
+# _generate_next_value_ 应该是一个静态方法，但在 3.8 和 3.9 上如果被装饰为
+# 静态方法则 Enum 无法正常工作。必须将此静态方法放到一个基类中，然后继承才行。
+#
+# https://github.com/python/mypy/issues/7591#issuecomment-652800625
+# https://github.com/python/typeshed/issues/10428#issuecomment-1631657737
+#
+# 在升级到 Python 3.10 后删除此 workaround。
+class _PNGChunkTypeBase(Enum):
     @staticmethod
     def _generate_next_value_(name, start, count, last_values):
         return name.encode("ascii")
 
+
+class PNGChunkType(_PNGChunkTypeBase):
     IHDR = auto()
     PLTE = auto()
     IDAT = auto()

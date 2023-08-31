@@ -11,7 +11,7 @@ from typing import Literal
 import h11
 import httpx
 
-from ._utils import achain, to_aiter
+from ._utils import anext
 from ._exceptions import GatewayTimeout
 from ._recv_helper import (
     PartialResult,

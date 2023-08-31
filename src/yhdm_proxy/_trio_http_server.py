@@ -15,7 +15,9 @@ from dataclasses import dataclass, field
 from collections.abc import Iterator, Iterable
 
 import typing
-from typing import ClassVar, Any, TypeAlias
+from typing import ClassVar, Any
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
 
 import trio
 import h11
