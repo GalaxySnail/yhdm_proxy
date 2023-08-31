@@ -92,6 +92,7 @@ async def modify_m3u8(
             content.append(url_prefix + line)
         else:
             content.append(line)
+        content.append("\n")
 
     body = "".join(content).encode()
     headers = http_wrapper.simple_response_header(

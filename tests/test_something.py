@@ -51,8 +51,10 @@ async def test_m3u8(m3u8_url, m3u8_proxy_url, client, m3u8_expected):
 
     response = await client.get(m3u8_proxy_url)
     proxy_content_type = response.headers["Content-Type"]
+    proxy_content_length = int(response.headers["Content-Length"])
     proxy_text = response.text
 
     assert response.status_code == 200
-    assert origin_content_type == proxy_content_type
+    assert proxy_content_type == origin_content_type
+    assert proxy_content_length == len(m3u8_expected)
     assert proxy_text == m3u8_expected
