@@ -4,10 +4,8 @@
 #
 #    pip-compile --allow-unsafe --no-emit-index-url --output-file=win32-requirements.txt --strip-extras requirements.in
 #
-anyio==3.7.1
-    # via
-    #   -r requirements.in
-    #   httpcore
+anyio==4.0.0
+    # via httpcore
 attrs==23.1.0
     # via
     #   outcome

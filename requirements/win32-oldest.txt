@@ -5,9 +5,7 @@
 #    pip-compile --allow-unsafe --no-emit-index-url --output-file=win32-oldest.txt --strip-extras oldest.in
 #
 anyio==3.7.1
-    # via
-    #   -c requirements.in
-    #   httpcore
+    # via httpcore
 async-generator==1.10
     # via trio
 attrs==23.1.0
