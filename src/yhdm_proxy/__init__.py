@@ -52,7 +52,7 @@ async def serve(
 
         listeners: list[trio.SocketListener]
         listeners = await nursery.start(partial(
-            trio.serve_tcp,  # type: ignore[arg-type]
+            trio.serve_tcp,
             partial(handler, get_logger=get_logger),
             port,
             host=host,

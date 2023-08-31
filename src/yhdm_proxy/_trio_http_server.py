@@ -26,12 +26,6 @@ from . import _log
 from ._context import request
 
 
-# 在 python3.10 之前，不要在运行时执行如下代码
-if typing.TYPE_CHECKING or sys.version_info >= (3, 10):
-    BytesLikeStr: TypeAlias = bytes | bytearray | str
-    H11Headers: TypeAlias = Iterable[tuple[BytesLikeStr, BytesLikeStr]]
-
-
 # We are using email.utils.format_datetime to generate the Date header.
 # It may sound weird, but it actually follows the RFC.
 # Please see: https://stackoverflow.com/a/59416334/14723771
@@ -54,7 +48,7 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
     max_recv: int = 64 * 1024
     timeout: int = 10
     conn: h11.Connection = field(init=False)
-    ident: bytes = field(init=False)
+    ident: str = field(init=False)
 
     _next_id: ClassVar[Iterator[int]] = count()
 
@@ -63,7 +57,7 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
         # Our Server: header
         self.ident = " ".join(
             [f"yhdm_proxy/{__version__}", h11.PRODUCT_ID]
-        ).encode("ascii")
+        )
         # A unique id for this connection, to include in debugging output
         # (useful for understanding what's going on if there are multiple
         # simultaneous clients).
@@ -77,7 +71,8 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
             raise RuntimeError("can't send anything when connection is closed")
         data = self.conn.send(event)
         try:
-            await self.stream.send_all(data)
+            if data:
+                await self.stream.send_all(data)
         except BaseException:
             # 如果发送失败，则 stream 的状态不可预知，只能关闭
             self.conn.send_failed()
@@ -86,7 +81,7 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
     async def send_response(
         self, *,
         status_code: int,
-        headers: H11Headers,
+        headers: list[tuple[bytes, bytes]] | list[tuple[str, str]],
         reason: bytes | str = b"",
     ) -> None:
         res = h11.Response(
@@ -164,7 +159,7 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
     async def aclose(self):
         await self._shutdown_and_clean_up()
 
-    def _basic_headers(self) -> list[tuple[BytesLikeStr, BytesLikeStr]]:
+    def _basic_headers(self) -> list[tuple[str, str]]:
         # HTTP requires these headers in all responses (client would do
         # something different here)
         return [
@@ -174,10 +169,10 @@ class TrioHTTPWrapper(trio.abc.AsyncResource):
 
     def simple_response_header(
         self,
-        content_type: BytesLikeStr | None,
+        content_type: str | None,
         content_length: int,
-    ) -> list[tuple[BytesLikeStr, BytesLikeStr]]:
-        headers: list[tuple[BytesLikeStr, BytesLikeStr]]
+    ) -> list[tuple[str, str]]:
+        headers: list[tuple[str, str]]
         headers = self._basic_headers()
         if content_type is not None:
             headers.append(("Content-Type", content_type))

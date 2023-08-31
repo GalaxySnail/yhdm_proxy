@@ -32,9 +32,6 @@ from ._trio_http_server import TrioHTTPWrapper
 from ._context import get_client
 from ._exceptions import BadGateway
 
-if typing.TYPE_CHECKING:
-    from ._trio_http_server import H11Headers
-
 
 @asynccontextmanager
 async def wrap_timeout_error():
@@ -163,7 +160,7 @@ async def modify_png_video(
         await http_wrapper.log(f"start_data = {start_data!r}")
         await http_wrapper.send_response(
             status_code=response.status_code,
-            headers=response.headers.items(),
+            headers=response.headers.raw,
             reason=response.reason_phrase,
         )
         await http_wrapper.send_data(start_data)
