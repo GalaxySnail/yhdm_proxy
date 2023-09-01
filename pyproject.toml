@@ -1,6 +1,46 @@
 [build-system]
-requires = ["setuptools>=42.0", "wheel"]
+requires = ["setuptools>=63.0"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "yhdm-proxy"
+# TODO 在 dynamic 中指定 version
+version = "1.1.0"
+# home-page url is specified in setup.py
+authors = [{name = "GalaxySnail"}]
+description = "一个用于下载樱花动漫 m3u8 文件的反向代理"
+readme = {file = "README.md", content-type = "text/markdown"}
+license = {text = "AGPL-3.0-or-later"}
+requires-python = ">=3.7"
+keywords = ["trio", "proxy", "樱花动漫", "m3u8", "png"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Framework :: Trio",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Natural Language :: Chinese (Simplified)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Internet :: Proxy Servers",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Multimedia :: Video :: Conversion",
+    "Typing :: Typed",
+]
+dependencies = [
+    "trio >= 0.20.0",
+    "httpx >= 0.24.0",
+    "h11 >= 0.13.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+yhdm_proxy = ["py.typed"]
 
 [tool.pytest.ini_options]
 addopts = [
