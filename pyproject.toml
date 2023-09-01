@@ -36,6 +36,16 @@ dependencies = [
     "h11 >= 0.13.0",
 ]
 
+[project.optional-dependencies]
+test = [
+    "pytest >= 6.0.0",
+    "flask >= 2.2.0",
+]
+check = [
+    "mypy",
+    "trio-typing",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
