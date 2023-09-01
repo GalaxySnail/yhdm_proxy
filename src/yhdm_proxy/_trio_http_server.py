@@ -22,8 +22,7 @@ if sys.version_info >= (3, 10):
 import trio
 import h11
 
-from ._version import __version__
-from . import _log
+from . import __version__, _log
 from ._context import request
 
 
